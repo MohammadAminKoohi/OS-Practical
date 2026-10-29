@@ -1,69 +1,85 @@
-# Running the HW2 judge
+# Running the HW3 judge
 
-This repository contains starter code and judging tools. Follow the course
-handout for assignment requirements and submission rules. For installation and
-testing on Linux, macOS or Windows, see [Langar Lab](LANGAR-LAB.md).
+Use your own previous `q2/src/run.c`; merge the new interface and helpers.
+The supplied TODO runner is intentionally incomplete. Do not replace working
+student code with the blank runner. The Persian handout defines requirements.
+Keep `src/image_helper.py` beside the binary's `src/` directory from HW7 onward.
 
-The commands below run the judge directly inside Linux. After installing the
-tools, building and testing HW2 require neither sudo nor a network connection.
+## Langar Lab
 
-## Prerequisites
-
-Use Linux with GCC, Make and Python 3.10+. The judge uses only the Python
-standard library; no pip packages are needed. On Debian/Ubuntu:
+Install the helper using [the usage guide](LANGAR-LAB.md). It includes
+prerequisites, native/VM setup and troubleshooting. Run from the repository root:
 
 ```sh
-sudo apt update
-sudo apt install build-essential python3 git
+./.langar-lab/bin/langar-lab setup
+./.langar-lab/bin/langar-lab test hw3 --source ./q2 --json ./result.json
 ```
 
-## Download, build and test
+Linux defaults to native; macOS/Windows use the owned Multipass VM. Choose
+`--backend native` or `--backend multipass`. Windows PowerShell can invoke
+`.\.langar-lab\bin\langar-lab.exe`; Bash is not required on the host.
+Builds run unprivileged. HW3+ tests need namespace/mount privileges inside Linux;
+the worker invokes `sudo -n` for the course judge. On native Linux, enable this
+by running `sudo -v` in the same terminal before the CLI. For an ordinary native
+account without noninteractive sudo, use the VM backend or run the manual judge.
+
+## Directly in Linux
 
 ```sh
-git clone https://github.com/MohammadAminKoohi/OS-Practical.git
-cd OS-Practical
+sudo apt install build-essential python3 busybox-static util-linux procps
 make -C q2 clean
 make -C q2 CC=gcc
-python3 judge/test_langar.py
+sudo python3 judge/test_semester.py --assignment 3 --binary ./q2/langar --json result.json
+python3 judge/check_submission.py ./submission
 ```
 
-The executable is `q2/langar`. Implement `q2/src/run.c`; the untouched starter
-builds and scores **5/100**, which is expected. Each test prints PASS or FAIL,
-its points and any failure details. The total functional score is 100.
+The structural checker expects an extracted submission containing `q2/` and `q3/`.
+It checks required nonempty source/report files and MP4 headers, not correctness
+of the explanations or full playback. Build outputs must be removed before submission.
 
-The judge compiles `probe.c` in a temporary directory; do not build it manually
-or use it in your implementation. Each test has a five-second timeout.
+Functional scoring (100 total):
 
-Judge exit codes:
+- `hw2_regression`: 20
+- `pid_namespace`: 20
+- `private_hostname`: 15
+- `default_hostname`: 15
+- `host_unchanged`: 15
+- `isolated_wait`: 10
+- `namespace_cli`: 5
 
-- `0`: all tests passed.
-- `1`: one or more functional tests failed.
-- `2`: setup or usage error, such as a missing executable or compiler.
+Exit codes: 0 passed, 1 functional failures, 2 setup/environment error. The CLI
+also uses 3 for build failure and 130 for interruption. Setup/build errors have
+no functional score. Tests print each failure and write per-case JSON. Prior
+features include the earlier milestones; HW8 deliberately moves the isolated
+command from namespace PID 1 to a child of its PID-1 supervisor. The original
+non-isolated HW2 contract remains unchanged.
 
-## Save logs and JSON results
+Primary documentation: [Linux manual pages](https://man7.org/linux/man-pages/),
+[OCI image spec v1.1.1](https://github.com/opencontainers/image-spec/tree/v1.1.1).
 
-Run from the repository root. Capture both output streams while preserving the
-judge's exit status:
+## Q3 observation inside Linux
+
+Run the supplied Q3 workload from this release's root inside Linux:
 
 ```sh
-python3 judge/test_langar.py > q2/test-results.txt 2>&1
-status=$?
-cat q2/test-results.txt
-echo "$status"
+python3 tools/q3/hw3.py --json q3-observation.json
 ```
 
-Save per-test results or test another executable:
+On macOS/Windows, open the existing course VM with
+`./.langar-lab/bin/langar-lab shell --backend multipass` (use the `.exe` path
+from the usage guide on Windows), then clone/check out this release
+inside it. The Q2 CLI source snapshot contains `q2/` only; it does not mount the
+host repository into the guest. For example, inside the VM on first use:
 
 ```sh
-python3 judge/test_langar.py --json /tmp/langar-result.json
-python3 judge/test_langar.py --binary /path/to/submission/q2/langar --cc gcc
+sudo apt install git
+git clone https://github.com/MohammadAminKoohi/OS-Practical.git
+cd OS-Practical
+git checkout hw03-v1.0.0
 ```
 
-JSON includes `score`, `total` and, for each test, `id`, `points`, `earned`,
-`passed` and `error`. `--binary` may point outside this repository; the judge
-still uses this repository's tests. `--cc` selects the probe compiler.
-
-After cleaning the built executable and objects, run
-`python3 judge/check_submission.py /path/to/extracted-submission` to check the
-required submission files. This checks layout and basic file formats only;
-follow the separately provided course handout for requirements.
+If already cloned, fetch and check out the new tag. The Persian handout lists
+this week's packages. Q3 is manually graded from `q3/answers.md` and
+`q3/video.mp4`; `q3-observation.json` is evidence, not a score. Q2 judges and their
+points are unchanged. A missing BPF feature/tool/permission is an environment
+problem. Use the course VM rather than weakening native host security settings.
