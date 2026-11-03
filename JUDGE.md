@@ -34,8 +34,8 @@ python3 judge/check_submission.py ./submission
 ```
 
 The structural checker expects an extracted submission containing `q2/`.
-It checks required nonempty source/report files and MP4 headers, not correctness
-of the explanations or full playback. Build outputs must be removed before submission.
+It checks required nonempty Q2 source/report files and the Q2 video MP4 header.
+Build outputs must be removed before submission.
 
 Functional scoring (100 total):
 
