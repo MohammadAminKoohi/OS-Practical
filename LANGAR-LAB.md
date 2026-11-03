@@ -108,7 +108,7 @@ submission.
    reports remain under the user-cache directory in `langar-lab`, at the path
    printed after each run. Temporary Linux build workspaces are cleaned up.
 
-## 6. VM commands and Q3
+## 6. VM commands
 
 ```sh
 ./.langar-lab/bin/langar-lab status --backend multipass
@@ -120,11 +120,6 @@ Use `exit` to leave the guest shell. The helper manages only its own course VM.
 `reset --backend multipass` deletes and recreates that VM, including files you
 saved manually inside it; host code and reports remain. Add `--keep-work` to a
 test to retain its Linux copy for debugging; the workspace path is printed.
-
-`test hwN` evaluates Q2 only. Q3 observations/explanations are manually graded.
-On macOS/Windows, enter the VM with `shell` and obtain the repository/release
-**inside Linux**; the host repository is not automatically mounted. Follow that
-release's handout and judge guide for Q3 commands and packages.
 
 ## Optional: manual download or build from source
 

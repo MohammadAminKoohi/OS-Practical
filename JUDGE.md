@@ -33,7 +33,7 @@ sudo python3 judge/test_semester.py --assignment 3 --binary ./q2/langar --json r
 python3 judge/check_submission.py ./submission
 ```
 
-The structural checker expects an extracted submission containing `q2/` and `q3/`.
+The structural checker expects an extracted submission containing `q2/`.
 It checks required nonempty source/report files and MP4 headers, not correctness
 of the explanations or full playback. Build outputs must be removed before submission.
 
@@ -56,30 +56,3 @@ non-isolated HW2 contract remains unchanged.
 
 Primary documentation: [Linux manual pages](https://man7.org/linux/man-pages/),
 [OCI image spec v1.1.1](https://github.com/opencontainers/image-spec/tree/v1.1.1).
-
-## Q3 observation inside Linux
-
-Run the supplied Q3 workload from this release's root inside Linux:
-
-```sh
-python3 tools/q3/hw3.py --json q3-observation.json
-```
-
-On macOS/Windows, open the existing course VM with
-`./.langar-lab/bin/langar-lab shell --backend multipass` (use the `.exe` path
-from the usage guide on Windows), then clone/check out this release
-inside it. The Q2 CLI source snapshot contains `q2/` only; it does not mount the
-host repository into the guest. For example, inside the VM on first use:
-
-```sh
-sudo apt install git
-git clone https://github.com/MohammadAminKoohi/OS-Practical.git
-cd OS-Practical
-git checkout hw03-v1.0.0
-```
-
-If already cloned, fetch and check out the new tag. The Persian handout lists
-this week's packages. Q3 is manually graded from `q3/answers.md` and
-`q3/video.mp4`; `q3-observation.json` is evidence, not a score. Q2 judges and their
-points are unchanged. A missing BPF feature/tool/permission is an environment
-problem. Use the course VM rather than weakening native host security settings.

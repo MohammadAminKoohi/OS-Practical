@@ -9,9 +9,9 @@ import sys
 
 TEXT_FILES = (
     "q2/Makefile", "q2/src/main.c", "q2/src/run.c", "q2/include/runner.h",
-    "q2/answers.md", "q2/test-results.txt", "q3/answers.md",
+    "q2/answers.md", "q2/test-results.txt",
 )
-VIDEOS = ("q2/video.mp4", "q3/video.mp4")
+VIDEOS = ("q2/video.mp4",)
 
 
 def check(root):
@@ -41,7 +41,7 @@ def check(root):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("submission", type=Path, help="directory containing q2/ and q3/")
+    parser.add_argument("submission", type=Path, help="directory containing q2/")
     parser.add_argument("--json", type=Path)
     args = parser.parse_args()
     root = args.submission.resolve()

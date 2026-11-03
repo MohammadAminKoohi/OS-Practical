@@ -1,72 +1,52 @@
-# Operating Systems Practical Assignments
+# Operating Systems Practical: Q2
 
-Student starter code, public judges and development tools for the Operating
-Systems practical assignments. The course handouts are distributed separately
-and define each assignment's requirements, deadlines and submission rules.
-
-## Assignment structure
-
-The practical assignments have three questions:
-
-- **Q1:** a separate course exercise managed by the course staff.
-- **Q2 — Langar:** an incremental container runtime written in C. Extend your
-  own implementation each week and preserve the behavior from earlier stages.
-- **Q3 — Linux:** a short investigation of Linux processes, performance,
-  memory or security. Run the experiment, interpret the observations and
-  explain your reasoning.
-
-Q2 and Q3 include written answers and video explanations as specified in the
-handout. Q2 has automated functional tests; Q3 observations and explanations
-are evaluated manually. Keep the submitted `q2/` and `q3/` directories directly
-under your submission root, following that week's required file list.
+Starter code, public judges and development tools for the course's second
+practical question, **Langar**. The course handout defines each assignment's
+requirements, deadlines and submission format.
 
 ## Langar
 
-Langar is a teaching project that builds a small Linux container runtime one
-operating-system concept at a time. It begins with a command launcher:
+Langar is an incremental container runtime written in C. Each assignment adds
+Linux operating-system features while you carry your own implementation forward:
+
+- **HW2 — Processes:** fork, execute a command and wait for it.
+- **HW3 — Namespaces:** isolate process IDs and the hostname.
+- **HW4 — Resource controls:** set CPU affinity and an address-space limit.
+- **HW5 — Mounts:** create private mounts and a matching `/proc` view.
+- **HW6 — Root filesystem:** run a command inside a supplied root filesystem.
+- **HW7 — Images:** combine local OCI image layers and image configuration.
+- **HW8 — Process lifecycle:** supervise a workload, forward signals, reap
+  children and clean up the runtime.
+
+For example, Langar's command runner accepts a command and its arguments:
 
 ```sh
 ./q2/langar run -- /bin/echo hello
 ```
 
-The planned progression from HW2 to HW8 is:
-
-- **HW2 — Processes:** create a child, execute a command, wait and return its status.
-- **HW3 — Namespaces:** add PID and hostname isolation.
-- **HW4 — Resource controls:** restrict CPU affinity and virtual address space.
-- **HW5 — Mounts:** create a private mount namespace and a matching `/proc` view.
-- **HW6 — Root filesystem:** execute commands inside a supplied root filesystem.
-- **HW7 — Images:** assemble local OCI image layers and apply image configuration.
-- **HW8 — Process lifecycle:** supervise workloads as PID 1, forward signals,
-  reap children and clean up remaining processes and runtime state.
-
-By the end, Langar can run supported Linux image workloads with isolation,
-resource controls and lifecycle management. Each week's handout defines the
-supported subset and exact behavior. Starter updates and tests are released
-incrementally; use the release announced for your assignment.
+Each weekly handout specifies that release's supported behavior. Preserve your
+working code from earlier assignments when merging the supplied updates.
 
 ## Repository layout
 
 ```text
 .
-├── README.md                    # Course project overview
-├── LANGAR-LAB.md                # Helper installation, usage and troubleshooting
-├── JUDGE.md                     # Direct judge commands for this release
+├── README.md                 # Langar and repository overview
+├── LANGAR-LAB.md             # Installation, usage and troubleshooting
+├── JUDGE.md                  # Direct Linux judge commands
 ├── q2/
-│   ├── Makefile                 # Build the C runtime
-│   ├── include/runner.h         # Supplied interface
-│   └── src/                    # Parser, runner and milestone-specific helpers
-├── judge/                      # Public tests, probes and submission checker
+│   ├── Makefile              # Builds the C runtime
+│   ├── include/runner.h      # Runtime interface
+│   └── src/                  # Command parser, runtime and supplied helpers
+├── judge/                    # Functional tests, probes and layout checker
 └── tools/
-    ├── install-langar-lab.sh    # macOS/Linux helper installer
-    ├── install-langar-lab.ps1   # Windows PowerShell helper installer
-    └── langar-lab/             # Helper source, embedded judges and checksums
+    ├── install-langar-lab.sh # macOS/Linux helper installer
+    ├── install-langar-lab.ps1# Windows PowerShell helper installer
+    └── langar-lab/           # Helper source and checksums
 ```
 
-Additional Q2 helpers and Q3 workloads appear as their assignments are released.
-In HW2, complete `q2/src/run.c`; `q2/src/main.c` supplies the command-line parser.
-Later releases extend the interface and add files. Merge these updates into
-your previous implementation while retaining your working code.
+The supplied files and test cases grow with each release. In HW2, implement
+`q2/src/run.c`; `q2/src/main.c` provides the command-line parser.
 
 ## Getting started
 
@@ -75,8 +55,9 @@ git clone https://github.com/MohammadAminKoohi/OS-Practical.git
 cd OS-Practical
 ```
 
-Install the prerequisites in the [Langar Lab guide](LANGAR-LAB.md), then on
-macOS/Linux run:
+Follow [LANGAR-LAB.md](LANGAR-LAB.md) to install the helper and prerequisites.
+It runs on native Linux or in a local Ubuntu VM on macOS and Windows. To test
+HW2 from the repository root on macOS/Linux:
 
 ```sh
 sh tools/install-langar-lab.sh
@@ -84,27 +65,17 @@ sh tools/install-langar-lab.sh
 ./.langar-lab/bin/langar-lab test hw2 --source ./q2 --json ./hw2-result.json
 ```
 
-On Windows, follow the guide's [PowerShell instructions](LANGAR-LAB.md#2-install-and-run).
-Replace `hw2` with the matching assignment when it is released.
-
-Langar Lab builds and tests your code inside Linux. Linux users default to
-**native** execution, with no VM download. macOS and Windows use a local Ubuntu
-VM through **Multipass**. The helper copies your sources, builds them, runs the
-public judge and saves results and logs. Its Go source is available under
-`tools/langar-lab/`; prebuilt executables are provided through
-[GitHub Releases](https://github.com/MohammadAminKoohi/OS-Practical/releases/tag/langar-lab-v0.2.0).
-
-For building and running the judge directly inside Linux, see [JUDGE.md](JUDGE.md).
+For direct builds and tests inside Linux, see [JUDGE.md](JUDGE.md).
 
 ## Testing and submission
 
-Public functional tests report case results and a score out of 100. The
-unfinished HW2 starter builds and scores **5/100**; implement the runner to
-pass the remaining tests. Build and environment errors are reported separately
-and receive no functional score. Final grading reruns the course judge on
-your submitted code; local results help you find and fix problems.
+The public functional judge reports a score out of 100. The unfinished HW2
+starter builds and scores **5/100**; implementation work should raise that score.
+Build and environment errors are reported separately and do not produce a
+functional score. Local results help you debug; final grading reruns the course
+judge on your submitted source.
 
-Before submitting, follow the handout's file layout, include the required
-answers and videos, and remove build products. The submission checker in
-`judge/` checks the required layout and basic file formats. Full judge commands,
-JSON results and log instructions are documented in [JUDGE.md](JUDGE.md).
+Submit the required `q2/` files listed in the handout, with answers and video
+under `q2/`. Remove executables and object files before submission. The layout
+checker checks required files and basic formats; [JUDGE.md](JUDGE.md) explains
+how to run it and save judge logs.
