@@ -154,11 +154,48 @@ def previous(h):
             if name not in ('hw2_regression', 'previous_features'):
                 fn(h)
 
+@case(4, 'previous_features', 20)
+def previous4(h): previous(h)
 
+@case(4, 'cpu_affinity', 20)
+def affinity(h):
+    cpu = min(os.sched_getaffinity(0))
+    out = good(h.call(['--cpus',str(cpu)], [str(h.runtime),'resources']))
+    require(out.split()[0] == f'{cpu},'.encode(), 'affinity mask not applied')
 
+@case(4, 'address_space_limit', 20)
+def address_limit(h):
+    out = good(h.call(['--as-limit-mib','64'], [str(h.runtime),'resources']))
+    require([int(x) for x in out.split()[1:]] == [64*1024*1024]*2, 'RLIMIT_AS soft and hard limits must both be 64 MiB')
 
+@case(4, 'bounded_allocation', 15)
+def allocation(h):
+    good(h.call(['--as-limit-mib','64'], [str(h.runtime),'allocate','128']), b'DENIED\n')
+    good(h.call(['--as-limit-mib','64'], [str(h.runtime),'allocate','8']), b'OK\n')
 
+@case(4, 'combined_controls', 15)
+def combined(h):
+    cpu = min(os.sched_getaffinity(0))
+    mask, soft, hard = good(h.call(['--isolate','--cpus',str(cpu),'--as-limit-mib','64'],
+                              [str(h.runtime),'resources'])).split()
+    require(mask == f'{cpu},'.encode() and int(soft) == int(hard) == 64*1024*1024, 'combined controls failed')
+    parent_mask = os.sched_getaffinity(0)
+    before = next(line for line in Path('/proc/self/limits').read_text().splitlines() if line.startswith('Max address space'))
+    p = h.launch(['--cpus',str(cpu),'--as-limit-mib','64'])
+    try:
+        read_line(p); read_line(p)
+        current = next(line for line in Path(f'/proc/{p.pid}/limits').read_text().splitlines() if line.startswith('Max address space'))
+        require(os.sched_getaffinity(p.pid) == parent_mask and current == before,
+                'resource settings changed the launcher instead of only the workload')
+        p.communicate(b'x',timeout=5)
+    finally: finish(p)
 
+@case(4, 'invalid_resource_options', 10)
+def invalid_resources(h):
+    for opts, expected in ((['--as-limit-mib','-1'],2), (['--as-limit-mib','0'],2),
+                           (['--cpus','1,'],1), (['--cpus','invalid'],1), (['--cpus','999999'],1)):
+        status, out, err, _ = h.call(opts)
+        require(status == expected and not out and err, f'invalid resources {opts} need status {expected}')
 
 
 
@@ -197,7 +234,7 @@ COUNTS = {n: len(c) for n,c in CASES.items()}
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--assignment', type=int, choices=range(3,4), required=True)
+    p.add_argument('--assignment', type=int, choices=range(3,5), required=True)
     p.add_argument('--binary', type=Path, required=True)
     p.add_argument('--cc', default='gcc')
     p.add_argument('--json', type=Path)
