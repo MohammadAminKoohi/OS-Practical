@@ -131,6 +131,7 @@ func snapshot(source, output string, assignments ...string) (string, error) {
 	}
 	embedded := map[string]string{"agent.py": "agent.py"}
 	if assignment == "hw2" {
+		embedded["sandbox.py"] = "sandbox.py"
 		embedded["hw2/test_langar.py"] = "test_langar.py"
 		embedded["hw2/probe.c"] = "probe.c"
 	} else {

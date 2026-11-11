@@ -29,7 +29,7 @@ int main(int argc, char **argv)
         cpu_set_t set; CPU_ZERO(&set); if (sched_getaffinity(0, sizeof(set), &set)) die("affinity");
         for (int i = 0; i < CPU_SETSIZE; ++i) if (CPU_ISSET(i, &set)) printf("%d,", i);
         struct rlimit r; if (getrlimit(RLIMIT_AS, &r)) die("rlimit");
-        printf(" %llu\n", (unsigned long long)r.rlim_cur);
+        printf(" %llu %llu\n", (unsigned long long)r.rlim_cur, (unsigned long long)r.rlim_max);
     } else if (!strcmp(argv[1], "allocate")) {
         size_t n = (size_t)strtoull(argv[2], NULL, 10)*1024*1024;
         void *p = mmap(NULL, n, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);

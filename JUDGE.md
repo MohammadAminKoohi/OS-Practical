@@ -18,15 +18,14 @@ prerequisites, native/VM setup and troubleshooting. Run from the repository root
 Linux defaults to native; macOS/Windows use the owned Multipass VM. Choose
 `--backend native` or `--backend multipass`. Windows PowerShell can invoke
 `.\.langar-lab\bin\langar-lab.exe`; Bash is not required on the host.
-Builds run unprivileged. HW3+ tests need namespace/mount privileges inside Linux;
-the worker invokes `sudo -n` for the course judge. On native Linux, enable this
+A trusted supervisor uses `sudo -n`; builds and workloads run in separate Bubblewrap sandboxes as unprivileged host UID 65534. Judge files and reports are outside the writable sandbox. On native Linux, enable this
 by running `sudo -v` in the same terminal before the CLI. For an ordinary native
 account without noninteractive sudo, use the VM backend or run the manual judge.
 
 ## Directly in Linux
 
 ```sh
-sudo apt install build-essential python3 busybox-static util-linux procps
+sudo apt install build-essential python3 busybox-static util-linux procps bubblewrap
 make -C q2 clean
 make -C q2 CC=gcc
 sudo python3 judge/test_semester.py --assignment 3 --binary ./q2/langar --json result.json

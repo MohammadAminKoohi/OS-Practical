@@ -44,11 +44,11 @@ class Harness(baseline.Harness):
                         '-Wall', '-Wextra', '-Werror', str(HERE / 'probe_runtime.c'),
                         '-o', str(self.runtime)], check=True, timeout=60)
         self.root = rootfs.create(self.directory / 'rootfs', self.runtime) if hw >= 6 else None
-        self.state = self.directory / 'state'; self.state.mkdir()
+        self.state = self.directory / 'state'; self.state.mkdir(); os.chown(self.state, 65534, 65534)
         self.env = dict(os.environ, LANGAR_STATE_DIR=str(self.state))
         self.ns_pid = 2 if hw >= 8 else 1
     def fresh(self, name):
-        return Path(tempfile.mkdtemp(prefix=name+'-', dir=self.directory))
+        path = Path(tempfile.mkdtemp(prefix=name+'-', dir=self.directory)); path.chmod(0o755); return path
     def call(self, opts=(), command=None, **kwargs):
         return self.run(['run', *map(str, opts), '--', *(command if command is not None else [str(self.runtime), 'identity'])],
                         env=self.env, **kwargs)
@@ -98,7 +98,7 @@ def pid_namespace(h):
         read_line(p); read_line(p)
         children = Path(f'/proc/{p.pid}/task/{p.pid}/children').read_text().split()
         require(len(children) == 1, 'launcher must have exactly one isolated child')
-        require(os.readlink(f'/proc/{children[0]}/ns/pid') != os.readlink('/proc/self/ns/pid'), 'actual PID namespace unchanged')
+        require(os.readlink(f'/proc/{children[0]}/ns/pid') != p.namespaces['pid'], 'actual PID namespace unchanged')
         out, err = p.communicate(b'x', timeout=5)
         require(p.returncode == 0 and not out and not err, 'isolated wait failed')
     finally:
@@ -107,17 +107,27 @@ def pid_namespace(h):
 @case(3, 'private_hostname', 15)
 def hostname(h):
     out = good(h.call(['--isolate','--hostname','team-langar']))
-    require(out.decode().split()[2] == 'team-langar', 'hostname not applied')
+    fields = out.decode().split()
+    require(len(fields) == 3 and fields[2] == 'team-langar', 'hostname not applied or malformed probe output')
 
 @case(3, 'default_hostname', 15)
 def default_hostname(h):
-    require(good(h.call(['--isolate'])).decode().split()[2] == 'langar', 'expected default hostname langar')
+    fields = good(h.call(['--isolate'])).decode().split()
+    require(len(fields) == 3 and fields[2] == 'langar', 'expected default hostname langar')
 
 @case(3, 'host_unchanged', 15)
 def host_unchanged(h):
     before = Path('/proc/sys/kernel/hostname').read_text()
     good(h.call(['--isolate','--hostname','private-name']))
     require(Path('/proc/sys/kernel/hostname').read_text() == before, 'host hostname changed')
+    p = h.launch(['--isolate'])
+    try:
+        read_line(p); read_line(p)
+        child = Path(f'/proc/{p.pid}/task/{p.pid}/children').read_text().split()
+        require(len(child) == 1, 'missing isolated child')
+        require(os.readlink(f'/proc/{child[0]}/ns/uts') != p.namespaces['uts'], 'workload did not create a private UTS namespace')
+        p.communicate(b'x', timeout=5)
+    finally: finish(p)
 
 @case(3, 'isolated_wait', 10)
 def isolated_wait(h):
@@ -129,6 +139,10 @@ def isolated_wait(h):
         require(p.returncode == 0 and not out and not err, 'bad release/status')
     finally:
         finish(p)
+    good(h.call(['--isolate'], [str(h.probe), 'exit', '42']), b'', status=42)
+    for command, expected in ((['/langar-no-such-command'], 127), ([str(h.directory)], 126)):
+        code, out, err, _ = h.call(['--isolate'], command)
+        require(code == expected and not out and err, f'isolated exec failure must return {expected}')
 
 @case(3, 'namespace_cli', 5)
 def namespace_cli(h):
@@ -156,7 +170,7 @@ def affinity(h):
 @case(4, 'address_space_limit', 20)
 def address_limit(h):
     out = good(h.call(['--as-limit-mib','64'], [str(h.runtime),'resources']))
-    require(int(out.split()[1]) == 64*1024*1024, 'RLIMIT_AS not 64 MiB')
+    require([int(x) for x in out.split()[1:]] == [64*1024*1024]*2, 'RLIMIT_AS soft and hard limits must both be 64 MiB')
 
 @case(4, 'bounded_allocation', 15)
 def allocation(h):
@@ -166,9 +180,9 @@ def allocation(h):
 @case(4, 'combined_controls', 15)
 def combined(h):
     cpu = min(os.sched_getaffinity(0))
-    mask, limit = good(h.call(['--isolate','--cpus',str(cpu),'--as-limit-mib','64'],
+    mask, soft, hard = good(h.call(['--isolate','--cpus',str(cpu),'--as-limit-mib','64'],
                               [str(h.runtime),'resources'])).split()
-    require(mask == f'{cpu},'.encode() and int(limit) == 64*1024*1024, 'combined controls failed')
+    require(mask == f'{cpu},'.encode() and int(soft) == int(hard) == 64*1024*1024, 'combined controls failed')
     parent_mask = os.sched_getaffinity(0)
     before = next(line for line in Path('/proc/self/limits').read_text().splitlines() if line.startswith('Max address space'))
     p = h.launch(['--cpus',str(cpu),'--as-limit-mib','64'])
@@ -197,7 +211,7 @@ def mount_namespace(h):
         read_line(p); read_line(p)
         children = Path(f'/proc/{p.pid}/task/{p.pid}/children').read_text().split()
         require(children, 'missing init child')
-        require(os.readlink(f'/proc/{children[0]}/ns/mnt') != os.readlink('/proc/self/ns/mnt'), 'mount namespace unchanged')
+        require(os.readlink(f'/proc/{children[0]}/ns/mnt') != p.namespaces['mnt'], 'mount namespace unchanged')
         p.communicate(b'x', timeout=5)
     finally: finish(p)
 

@@ -22,7 +22,7 @@ else
 fi
 
 lab_asset="langar-lab-$lab_system-$lab_arch"
-lab_url="https://github.com/MohammadAminKoohi/OS-Practical/releases/download/langar-lab-v0.2.0/$lab_asset"
+lab_url="https://github.com/MohammadAminKoohi/OS-Practical/releases/download/langar-lab-v0.3.0/$lab_asset"
 lab_expected=$(awk -v name="$lab_asset" '$2 == name {print $1}' "$lab_root/tools/langar-lab/SHA256SUMS")
 [ ${#lab_expected} -eq 64 ] || { echo 'Missing or invalid checksum.' >&2; exit 1; }
 lab_bin="$lab_root/.langar-lab/bin"

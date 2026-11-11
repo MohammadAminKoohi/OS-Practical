@@ -8,7 +8,7 @@ switch ($labProcessor) {
     default { throw 'Supported Windows CPU architectures: amd64 and arm64.' }
 }
 $labAsset = "langar-lab-windows-$labArch.exe"
-$labUrl = "https://github.com/MohammadAminKoohi/OS-Practical/releases/download/langar-lab-v0.2.0/$labAsset"
+$labUrl = "https://github.com/MohammadAminKoohi/OS-Practical/releases/download/langar-lab-v0.3.0/$labAsset"
 $labChecksums = Join-Path $PSScriptRoot 'langar-lab/SHA256SUMS'
 $labExpected = @(Get-Content -LiteralPath $labChecksums | Where-Object {
     $_ -match ('^[0-9a-f]{64}  ' + [regex]::Escape($labAsset) + '$')

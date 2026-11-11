@@ -121,7 +121,7 @@ func TestSnapshotContainsOnlyInputsAndCourseJudge(t *testing.T) {
 		}
 		names[h.Name] = true
 	}
-	if len(names) != 7 || !names["course/probe.c"] || !names["course/test_langar.py"] || !names["q2/src/run.c"] {
+	if len(names) != 8 || !names["course/sandbox.py"] || !names["course/probe.c"] || !names["course/test_langar.py"] || !names["q2/src/run.c"] {
 		t.Fatalf("unexpected archive files: %v", names)
 	}
 	if err := os.WriteFile(filepath.Join(source, "src/run.c"), []byte("changed"), 0600); err != nil {

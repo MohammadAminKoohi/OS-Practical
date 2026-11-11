@@ -14,6 +14,10 @@ import sys
 import tempfile
 import time
 
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from sandbox import Process
+
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
@@ -36,7 +40,7 @@ def require(condition, message):
 def stop_group(process):
     # Children can keep stdout open even after an incorrect launcher exits.
     try:
-        os.killpg(process.pid, signal.SIGKILL)
+        os.killpg(getattr(process, "group_pid", process.pid), signal.SIGKILL)
     except ProcessLookupError:
         pass
     process.wait()
@@ -44,8 +48,22 @@ def stop_group(process):
 
 class Harness:
     def __init__(self, binary, directory, compiler):
-        self.binary = binary
         self.directory = Path(directory)
+        self.directory.chmod(0o755)
+        bundle = self.directory / 'submission'
+        bundle.mkdir()
+        self.binary = bundle / 'langar'
+        shutil.copy2(binary, self.binary)
+        self.binary.chmod(0o755)
+        helper = binary.parent / 'src/image_helper.py'
+        if helper.is_file():
+            (bundle / 'src').mkdir()
+            shutil.copy2(helper, bundle / 'src/image_helper.py')
+        check = Process(['/bin/true'], readonly=[self.directory], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        try:
+            _, err = check.communicate(timeout=10)
+            if check.returncode != 0: raise RuntimeError('Sandbox unavailable: '+err.decode(errors='replace'))
+        finally: stop_group(check)
         self.probe = self.directory / "probe"
         subprocess.run(
             [*shlex.split(compiler), "-std=c11", "-D_POSIX_C_SOURCE=200809L",
@@ -54,17 +72,16 @@ class Harness:
         )
 
     def start(self, command, **kwargs):
-        return subprocess.Popen(
-            [str(self.binary), *command], stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            start_new_session=True, **kwargs,
-        )
+        writable = [self.state] if hasattr(self, 'state') else []
+        return Process([str(self.binary), *command], readonly=[self.directory], writable=writable,
+                       cwd=kwargs.pop('cwd', self.directory), stdin=subprocess.PIPE,
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
 
     def run(self, command, data=None, **kwargs):
         p = self.start(command, **kwargs)
         try:
             out, err = p.communicate(data, timeout=TIMEOUT)
-            return p.returncode, out, err, p.pid
+            return p.returncode, out, err, p.namespace_pid
         except subprocess.TimeoutExpired as exc:
             raise AssertionError(f"execution exceeded {TIMEOUT}s") from exc
         finally:
@@ -244,8 +261,8 @@ def main():
     binary = args.binary.resolve()
     if not binary.is_file() or not os.access(binary, os.X_OK):
         parser.error(f"executable not found: {binary}; build q2 first")
-    if os.name != "posix":
-        parser.error("a Linux environment is required")
+    if sys.platform != "linux" or os.geteuid() != 0:
+        parser.error("Linux root is required for the trusted judge; use sudo")
     results = []
     try:
         with tempfile.TemporaryDirectory(prefix="langar-tests-") as directory:
@@ -262,7 +279,7 @@ def main():
                 print(f"{'PASS' if error is None else 'FAIL'} {name}: {earned}/{points}")
                 if error:
                     print(f"  {error}")
-    except (OSError, subprocess.SubprocessError) as exc:
+    except (OSError, RuntimeError, subprocess.SubprocessError) as exc:
         print(f"Test setup failed: {exc}", file=sys.stderr)
         return 2
     report = dict(assignment="hw02-q2", score=sum(r["earned"] for r in results),

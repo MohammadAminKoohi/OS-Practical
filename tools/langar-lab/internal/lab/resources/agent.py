@@ -10,6 +10,11 @@ import signal
 import subprocess
 import sys
 import time
+import tempfile
+
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from sandbox import Process
 
 
 def start_time(pid):
@@ -24,7 +29,7 @@ def terminate_group(process):
         return
     def send(sig):
         try:
-            os.killpg(process.pid, sig)
+            os.killpg(getattr(process, "group_pid", process.pid), sig)
         except ProcessLookupError:
             pass
         except PermissionError:
@@ -99,6 +104,9 @@ def main():
                   score=None, total=None, results=[], environment={}, error=None,
                   cleanup="pending")
     process = None
+    staging = None
+    source = work / "q2"
+    course = work / "course"
     deadline = time.monotonic() + args.timeout
 
     def interrupted(_signum, _frame):
@@ -109,7 +117,7 @@ def main():
     (work / "worker.json").write_text(json.dumps(
         dict(pid=os.getpid(), start_time=start_time(os.getpid()))))
 
-    def run(command, filename, append=False):
+    def run(command, filename, append=False, isolated=False):
         nonlocal process
         if (work / "cancel.request").exists():
             raise KeyboardInterrupt
@@ -118,8 +126,11 @@ def main():
         with path.open(mode) as log, path.open("rb") as reader:
             if append:
                 reader.seek(0, 2)
-            process = subprocess.Popen(command, cwd=work / "q2", stdout=log,
-                                       stderr=subprocess.STDOUT, start_new_session=True)
+            if isolated:
+                process = Process(command, writable=[source], cwd=source, stdout=log, stderr=subprocess.STDOUT)
+            else:
+                process = subprocess.Popen(command, cwd=source, stdout=log,
+                                           stderr=subprocess.STDOUT, start_new_session=True)
             try:
                 while True:
                     chunk = reader.read(65536)
@@ -142,26 +153,37 @@ def main():
                 process = None
 
     try:
+        if os.geteuid() != 0:
+            raise RuntimeError('The trusted worker requires sudo; student builds run as nobody in a sandbox')
         report["environment"] = environment(args.cc)
+        staging = tempfile.TemporaryDirectory(prefix='langar-worker-', dir='/var/tmp')
+        protected = Path(staging.name); protected.chmod(0o755)
+        source = protected / 'q2'; course = protected / 'course'
+        shutil.copytree(work / 'q2', source)
+        shutil.copytree(work / 'course', course)
+        course.chmod(0o700)
+        for path in [source, *source.rglob('*')]:
+            os.chown(path, 65534, 65534)
+            path.chmod(0o755 if path.is_dir() else 0o644)
         print("==> Linux:", report["environment"]["architecture"],
               report["environment"]["kernel"], flush=True)
         print("==> Clean build", flush=True)
         report.update(status="build_failed", exit_code=3)
-        code = run(["make", "clean"], "build.log")
+        code = run(["make", "clean"], "build.log", isolated=True)
         if code == 0:
-            code = run(["make", f"CC={args.cc}"], "build.log", append=True)
+            code = run(["make", f"CC={args.cc}"], "build.log", append=True, isolated=True)
         report["build_exit_code"] = code
         if code != 0:
             report["error"] = f"Build failed with exit status {code}; see build.log"
         else:
-            binary = work / "q2/langar"
+            binary = source / "langar"
             result = artifacts / "judge.json"
             print(f"==> {args.assignment.upper()} public judge", flush=True)
             report.update(status="environment_error", exit_code=2)
             if args.assignment == 'hw2':
-                command = [sys.executable, '-B', '-u', str(work/'course/test_langar.py')]
+                command = [sys.executable, '-I', '-B', '-u', str(course/'test_langar.py')]
             else:
-                command = [sys.executable, '-B', '-u', str(work/'course/test_semester.py'),
+                command = [sys.executable, '-I', '-B', '-u', str(course/'test_semester.py'),
                            '--assignment', args.assignment[2:]]
                 if os.geteuid() != 0:
                     command = ['sudo', '-n', *command]
@@ -197,14 +219,21 @@ def main():
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         terminate_group(process)
+        if staging is not None: staging.cleanup()
         report["cleanup"] = "complete"
         report_path = artifacts / "report.json"
         temporary = report_path.with_suffix(".tmp")
         temporary.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
         temporary.replace(report_path)
         (work / "worker.json").unlink(missing_ok=True)
+        owner = work.stat()
+        for path in artifacts.iterdir():
+            os.chown(path, owner.st_uid, owner.st_gid)
+        os.chown(artifacts, owner.st_uid, owner.st_gid)
     return report["exit_code"]
 
 
 if __name__ == "__main__":
+    if os.geteuid() != 0:
+        os.execvp('sudo', ['sudo', '-n', sys.executable, '-I', str(Path(__file__).resolve()), *sys.argv[1:]])
     sys.exit(main())

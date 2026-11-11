@@ -53,6 +53,7 @@ The supplied files and test cases grow with each release. In HW2, implement
 ```sh
 git clone https://github.com/MohammadAminKoohi/OS-Practical.git
 cd OS-Practical
+git checkout hw02-v1.1.0
 ```
 
 Follow [LANGAR-LAB.md](LANGAR-LAB.md) to install the helper and prerequisites.
@@ -79,3 +80,12 @@ Submit the required `q2/` files listed in the handout, with answers and video
 under `q2/`. Remove executables and object files before submission. The layout
 checker checks required files and basic formats; [JUDGE.md](JUDGE.md) explains
 how to run it and save judge logs.
+
+## Released assignments
+
+Langar starts at HW2. Use the tag matching your handout: `hw02-v1.1.0`,
+`hw03-v1.1.0`, `hw04-v1.1.0`, `hw05-v1.1.0`, `hw06-v1.1.0`,
+`hw07-v1.1.0` or `hw08-v1.1.0`. The main branch contains the HW8 starter;
+merge each starter update into your own implementation. Every release contains
+Q2 starter code, public judges and the helper. Handouts and reference answers
+are distributed separately by course staff.

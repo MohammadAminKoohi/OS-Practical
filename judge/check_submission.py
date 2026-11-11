@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check an extracted HW03 submission's layout without running student code."""
+"""Check an extracted Q2 submission's layout without running student code."""
 
 import argparse
 import json

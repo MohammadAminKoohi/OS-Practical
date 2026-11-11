@@ -103,6 +103,7 @@ packages:
   - tar
   - busybox-static
   - strace
+  - bubblewrap
 write_files:
   - path: /etc/langar-lab-owner
     content: '%s'
@@ -196,6 +197,14 @@ func (a *App) ensureVM(ctx context.Context, o options) (vmConfig, error) {
 	if _, err = a.capture(ctx, "multipass", "exec", cfg.Name, "--", "test", "-f", "/var/lib/langar-lab/ready"); err != nil {
 		return cfg, fmt.Errorf("guest provisioning did not finish the course setup: %w", err)
 	}
+	// Upgrade an owned HW2 VM in place; preserve its ownership and host reports.
+	if _, err = a.capture(ctx, "multipass", "exec", cfg.Name, "--", "test", "-x", "/usr/bin/bwrap"); err != nil {
+		fmt.Fprintln(a.Out, "==> Installing semester fixture tools in owned course VM")
+		code, installErr := a.Exec.Run(ctx, "multipass", []string{"exec", cfg.Name, "--", "sudo", "-n", "apt-get", "install", "-y", "busybox-static", "strace", "bubblewrap"}, nil, a.Out, a.Err)
+		if installErr != nil || code != 0 {
+			return cfg, fmt.Errorf("fixture tools install failed: %v (exit %d)", installErr, code)
+		}
+	}
 	if _, err = a.capture(ctx, "multipass", "exec", cfg.Name, "--", "python3", "-c", environmentScript, "gcc"); err != nil {
 		return cfg, err
 	}
@@ -205,14 +214,6 @@ func (a *App) ensureVM(ctx context.Context, o options) (vmConfig, error) {
 	cfg.Created = true
 	if err = writeJSON(filepath.Join(o.State, "vm.json"), cfg); err != nil {
 		return cfg, err
-	}
-	// Upgrade an owned HW2 VM in place; preserve its ownership and host reports.
-	if _, err = a.capture(ctx, "multipass", "exec", cfg.Name, "--", "test", "-x", "/usr/bin/busybox"); err != nil {
-		fmt.Fprintln(a.Out, "==> Installing semester fixture tools in owned course VM")
-		code, installErr := a.Exec.Run(ctx, "multipass", []string{"exec", cfg.Name, "--", "sudo", "-n", "apt-get", "install", "-y", "busybox-static", "strace"}, nil, a.Out, a.Err)
-		if installErr != nil || code != 0 {
-			return cfg, fmt.Errorf("fixture tools install failed: %v (exit %d)", installErr, code)
-		}
 	}
 	fmt.Fprintf(a.Out, "PASS environment %s\n", Profile)
 	return cfg, nil

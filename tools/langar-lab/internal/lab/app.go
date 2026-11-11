@@ -50,7 +50,7 @@ Test: --cc gcc (compiler inside Linux); --timeout 2m
 
 Exit codes: 0 passed, 1 test failures, 2 environment/usage error,
             3 build failure, 130 interrupted.
-HW2-HW8 are supported. HW3+ judge needs Linux namespace privileges via sudo.
+HW2-HW8 are supported. All judges use sudo to supervise isolated, unprivileged student code.
 Reset recreates only the owned course VM.`)
 }
 
@@ -190,7 +190,7 @@ const environmentScript = `import json,platform,shutil,subprocess,sys
 assert sys.platform == 'linux', 'Linux is required'
 assert sys.version_info >= (3,10), 'Python 3.10+ required'
 cc=sys.argv[1]
-for p in (cc,'make'):
+for p in (cc,'make','bwrap'):
  assert shutil.which(p), 'Missing '+p
 print(json.dumps(dict(system=platform.system(),kernel=platform.release(),architecture=platform.machine(),python=platform.python_version(),compiler=subprocess.check_output([cc,'--version'],text=True).splitlines()[0])))`
 
@@ -199,7 +199,7 @@ func (a *App) doctor(ctx context.Context, o options) error {
 	if o.Backend == "native" {
 		out, err := a.capture(ctx, "python3", "-c", environmentScript, o.CC)
 		if err != nil {
-			return fmt.Errorf("native tools unavailable; install GCC, Make and Python 3.10+: %w", err)
+			return fmt.Errorf("native tools unavailable; install GCC, Make, Bubblewrap and Python 3.10+: %w", err)
 		}
 		fmt.Fprintln(a.Out, strings.TrimSpace(out))
 		return nil

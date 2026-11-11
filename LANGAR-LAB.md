@@ -4,7 +4,7 @@ Langar Lab builds your C code in Linux and runs the **Q2 public tests**.
 **Linux** defaults to native execution, with no VM download. **macOS and
 Windows** use a local Ubuntu VM managed by Multipass and reused between runs.
 Assignment requirements and submission rules remain in the course handout.
-For the direct HW2 judge, see [JUDGE.md](JUDGE.md).
+For the direct judge for your release, see [JUDGE.md](JUDGE.md).
 
 ## 1. Install prerequisites
 
@@ -12,10 +12,10 @@ For the direct HW2 judge, see [JUDGE.md](JUDGE.md).
 
   ```sh
   sudo apt update
-  sudo apt install build-essential python3 busybox-static util-linux procps sudo curl ca-certificates git
+  sudo apt install build-essential python3 busybox-static util-linux procps bubblewrap sudo curl ca-certificates git
   ```
 
-  Later namespace/mount tests also need sudo privileges.
+  All tests need sudo for the trusted supervisor. Student code runs as an unprivileged host user in a Bubblewrap sandbox.
 - **macOS/Windows:** follow the [official Multipass installation guide](https://canonical.com/multipass/docs/latest/how-to-guides/install-multipass/),
   including its OS and virtualization requirements. Open a new terminal and
   check `multipass version`. The VM receives the compiler and Python; you do
@@ -47,7 +47,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\install-langar-lab.p
 
 The execution-policy option applies only to that installer process. Installers
 detect amd64/arm64, download only your executable from
-[Langar Lab v0.2.0](https://github.com/MohammadAminKoohi/OS-Practical/releases/tag/langar-lab-v0.2.0),
+[Langar Lab v0.3.0](https://github.com/MohammadAminKoohi/OS-Practical/releases/tag/langar-lab-v0.3.0),
 and verify it against the repository's SHA-256 checksums before running it.
 Installation is local to `.langar-lab/bin/`; no administrator access or PATH
 change is needed. Rerun the installer to retry or install the version pinned by
@@ -72,8 +72,7 @@ These examples use the Unix executable path; use the `.exe` path on Windows.
 ```
 
 Native works only on Linux. Linux users can also install Multipass and select
-it explicitly. HW3–HW8 compile as your regular user and run privileged judges
-through `sudo -n`. On native Linux, run `sudo -v` in the same terminal first;
+it explicitly. All assignments use a trusted supervisor through `sudo -n`; builds and workloads run inside separate user, PID, mount, network and hostname namespaces, mapped to the unprivileged host UID 65534. On native Linux, run `sudo -v` in the same terminal first;
 if your sudo policy cannot authorize the worker, choose Multipass or the direct
 judge documented for that release. Run the CLI as your regular user.
 
@@ -101,8 +100,7 @@ submission.
 1. Copies `Makefile`, `src/` and `include/` into a source snapshot. Your original
    files stay unchanged; host executables and object files are not used. Source
    symlinks are rejected, so copy actual files into the required layout.
-2. Builds the copy with Make/GCC inside Linux and runs its embedded public
-   judge. Code is processed locally: Multipass transfers it to your own local
+2. Copies the trusted judge to a protected directory, then builds with Make/GCC in a Bubblewrap sandbox. Only the student source directory is writable during the build; judge files and reports are not mounted there. The judge starts each workload in a separate sandbox and records its real process and namespace identities. Code is processed locally: Multipass transfers it to your own local
    VM, with no upload to GitHub or a university grading service.
 3. Saves case results, source hash and actual Linux environment details. Host
    reports remain under the user-cache directory in `langar-lab`, at the path
@@ -124,7 +122,7 @@ test to retain its Linux copy for debugging; the workspace path is printed.
 ## Optional: manual download or build from source
 
 Executables and `SHA256SUMS` are on the
-[release page](https://github.com/MohammadAminKoohi/OS-Practical/releases/tag/langar-lab-v0.2.0).
+[release page](https://github.com/MohammadAminKoohi/OS-Practical/releases/tag/langar-lab-v0.3.0).
 Use `darwin` for macOS, `linux` for Linux and `windows` for Windows; use `amd64`
 for Intel/AMD 64-bit and `arm64` for Apple Silicon/ARM64. Verify SHA-256 before
 running. On Unix, run `chmod +x FILE`. Binaries are unsigned; if your OS blocks
@@ -142,3 +140,5 @@ On Windows use `-o dist/langar-lab.exe`. With Python 3 installed,
 `python3 scripts/build.py` cross-builds all six targets and generates checksums.
 Build output goes in `dist/`; it is not part of your assignment submission.
 Cross-building does not imply runtime testing on every host.
+
+The sandbox requires [Bubblewrap](https://github.com/containers/bubblewrap) and Linux user namespaces. If sandbox setup fails, the CLI reports an environment error with no score; use the course VM rather than disabling host security policies.
