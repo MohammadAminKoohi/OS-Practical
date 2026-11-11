@@ -197,10 +197,35 @@ def invalid_resources(h):
         status, out, err, _ = h.call(opts)
         require(status == expected and not out and err, f'invalid resources {opts} need status {expected}')
 
+@case(5, 'previous_features', 20)
+def previous5(h): previous(h)
 
+@case(5, 'private_mount_namespace', 20)
+def mount_namespace(h):
+    p = h.launch(['--isolate'])
+    try:
+        read_line(p); read_line(p)
+        children = Path(f'/proc/{p.pid}/task/{p.pid}/children').read_text().split()
+        require(children, 'missing init child')
+        require(os.readlink(f'/proc/{children[0]}/ns/mnt') != p.namespaces['mnt'], 'mount namespace unchanged')
+        p.communicate(b'x', timeout=5)
+    finally: finish(p)
 
+@case(5, 'private_procfs', 30)
+def procfs(h):
+    pid, proc_pid = good(h.call(['--isolate'], [str(h.runtime),'proc'])).split()
+    require(int(pid) == h.ns_pid and pid == proc_pid, '/proc/self PID differs from getpid')
 
+@case(5, 'host_mounts_unchanged', 20)
+def host_mounts(h):
+    before = Path('/proc/self/mountinfo').read_bytes()
+    good(h.call(['--isolate']))
+    require(Path('/proc/self/mountinfo').read_bytes() == before, 'host mount table changed')
 
+@case(5, 'isolated_exec_failure', 10)
+def exec_failure(h):
+    code, out, err, _ = h.call(['--isolate'], ['/langar-missing-command'])
+    require(code == 127 and not out and err, 'isolated missing exec must return 127')
 
 
 
@@ -234,7 +259,7 @@ COUNTS = {n: len(c) for n,c in CASES.items()}
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--assignment', type=int, choices=range(3,5), required=True)
+    p.add_argument('--assignment', type=int, choices=range(3,6), required=True)
     p.add_argument('--binary', type=Path, required=True)
     p.add_argument('--cc', default='gcc')
     p.add_argument('--json', type=Path)

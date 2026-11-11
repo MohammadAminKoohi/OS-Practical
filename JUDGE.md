@@ -1,4 +1,4 @@
-# Running the HW4 judge
+# Running the HW5 judge
 
 Use your own previous `q2/src/run.c`; merge the new interface and helpers.
 The supplied TODO runner is intentionally incomplete. Do not replace working
@@ -12,7 +12,7 @@ prerequisites, native/VM setup and troubleshooting. Run from the repository root
 
 ```sh
 ./.langar-lab/bin/langar-lab setup
-./.langar-lab/bin/langar-lab test hw4 --source ./q2 --json ./result.json
+./.langar-lab/bin/langar-lab test hw5 --source ./q2 --json ./result.json
 ```
 
 Linux defaults to native; macOS/Windows use the owned Multipass VM. Choose
@@ -28,7 +28,7 @@ account without noninteractive sudo, use the VM backend or run the manual judge.
 sudo apt install build-essential python3 busybox-static util-linux procps bubblewrap
 make -C q2 clean
 make -C q2 CC=gcc
-sudo python3 judge/test_semester.py --assignment 4 --binary ./q2/langar --json result.json
+sudo python3 judge/test_semester.py --assignment 5 --binary ./q2/langar --json result.json
 python3 judge/check_submission.py ./submission
 ```
 
@@ -39,11 +39,10 @@ Build outputs must be removed before submission.
 Functional scoring (100 total):
 
 - `previous_features`: 20
-- `cpu_affinity`: 20
-- `address_space_limit`: 20
-- `bounded_allocation`: 15
-- `combined_controls`: 15
-- `invalid_resource_options`: 10
+- `private_mount_namespace`: 20
+- `private_procfs`: 30
+- `host_mounts_unchanged`: 20
+- `isolated_exec_failure`: 10
 
 Exit codes: 0 passed, 1 functional failures, 2 setup/environment error. The CLI
 also uses 3 for build failure and 130 for interruption. Setup/build errors have
