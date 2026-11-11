@@ -25,4 +25,9 @@ int support_clear_directory(const char *root, const char *relative);
 int support_apply_image(struct image_data *image); /* student: HW7 */
 char **support_image_argv(struct image_data *image, char *const override[]); /* student: HW7 */
 int support_image_environment(struct image_data *image); /* student: HW7 */
+/* Supplied HW8 signal-wait scaffolding: no forwarding/reaping policy here. */
+int support_block_signals(void);
+void support_reset_signals(void);
+int support_wait_signal(int timeout_ms);
+long long support_now_ms(void);
 #endif

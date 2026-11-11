@@ -1,4 +1,4 @@
-# Running the HW7 judge
+# Running the HW8 judge
 
 Use your own previous `q2/src/run.c`; merge the new interface and helpers.
 The supplied TODO runner is intentionally incomplete. Do not replace working
@@ -12,7 +12,7 @@ prerequisites, native/VM setup and troubleshooting. Run from the repository root
 
 ```sh
 ./.langar-lab/bin/langar-lab setup
-./.langar-lab/bin/langar-lab test hw7 --source ./q2 --json ./result.json
+./.langar-lab/bin/langar-lab test hw8 --source ./q2 --json ./result.json
 ```
 
 Linux defaults to native; macOS/Windows use the owned Multipass VM. Choose
@@ -28,7 +28,7 @@ account without noninteractive sudo, use the VM backend or run the manual judge.
 sudo apt install build-essential python3 busybox-static util-linux procps bubblewrap
 make -C q2 clean
 make -C q2 CC=gcc
-sudo python3 judge/test_semester.py --assignment 7 --binary ./q2/langar --json result.json
+sudo python3 judge/test_semester.py --assignment 8 --binary ./q2/langar --json result.json
 python3 judge/check_submission.py ./submission
 ```
 
@@ -39,11 +39,12 @@ Build outputs must be removed before submission.
 Functional scoring (100 total):
 
 - `previous_features`: 20
-- `image_default_command`: 10
-- `image_config_and_overrides`: 20
-- `layer_changes_and_whiteouts`: 20
-- `independent_writable_runs`: 15
-- `invalid_images_and_cleanup`: 15
+- `init_and_workload_topology`: 10
+- `termination_signal_forwarding`: 15
+- `process_group_forwarding`: 10
+- `orphan_reaping`: 20
+- `main_status_and_signal_mask`: 10
+- `forced_shutdown_and_cleanup`: 15
 
 Exit codes: 0 passed, 1 functional failures, 2 setup/environment error. The CLI
 also uses 3 for build failure and 130 for interruption. Setup/build errors have

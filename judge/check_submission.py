@@ -9,7 +9,7 @@ import sys
 
 TEXT_FILES = (
     "q2/Makefile", "q2/src/main.c", "q2/src/run.c", "q2/include/runner.h",
-    'q2/src/image.c', 'q2/src/support.c', 'q2/src/image_helper.py', "q2/answers.md", "q2/test-results.txt",
+    'q2/src/image.c', 'q2/src/support.c', 'q2/src/image_helper.py', 'q2/src/signals.c', "q2/answers.md", "q2/test-results.txt",
 )
 VIDEOS = ("q2/video.mp4",)
 

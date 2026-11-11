@@ -319,18 +319,61 @@ def tree_hash(root):
         if p.is_file(): h.update(p.read_bytes())
     return h.hexdigest()
 
+@case(8, 'previous_features', 20)
+def previous8(h): previous(h)
 
+@case(8, 'init_and_workload_topology', 10)
+def topology(h): pid_namespace(h)
 
+@case(8, 'termination_signal_forwarding', 15)
+def forwarding(h):
+    for sig, expected in ((signal.SIGTERM,23),(signal.SIGINT,24)):
+        p = h.launch(['--isolate'], [str(h.runtime),'signal'])
+        try:
+            require(read_line(p) == b'READY\n', 'not ready')
+            p.send_signal(sig); out, err = p.communicate(timeout=5)
+            require(p.returncode == expected and out == f'GOT {sig}\n'.encode() and not err, 'signal not forwarded/status lost')
+        finally: finish(p)
 
+@case(8, 'process_group_forwarding', 10)
+def group_forward(h):
+    p = h.launch(['--isolate'], [str(h.runtime),'group'])
+    try:
+        require(read_line(p) == b'READY\n', 'group not ready')
+        p.terminate(); out, err = p.communicate(timeout=5)
+        require(p.returncode == 31 and out == b'GRANDCHILD-SIGNAL\n' and not err, 'descendant did not receive group signal')
+    finally: finish(p)
 
+@case(8, 'orphan_reaping', 20)
+def orphan(h):
+    p = h.launch(['--isolate'], [str(h.runtime),'orphan'])
+    try:
+        require(read_line(p) == b'REAPED\n', 'orphan remains zombie while main is alive')
+        require(read_line(p) == b'READY\n' and p.poll() is None, 'main did not remain alive')
+        out, err = p.communicate(b'x', timeout=5)
+        require(p.returncode == 42 and not out and not err, 'main status not retained')
+    finally: finish(p)
 
+@case(8, 'main_status_and_signal_mask', 10)
+def main_status(h):
+    good(h.call(['--isolate'],[str(h.runtime),'exit-other']), b'', status=42)
+    good(h.call(['--isolate'],[str(h.runtime),'mask']), b'0 0 0\n')
 
+@case(8, 'forced_shutdown_and_cleanup', 15)
+def forced(h):
+    p = h.launch(['--isolate'], [str(h.runtime),'ignore'])
+    try:
+        require(read_line(p) == b'READY\n', 'not ready')
+        p.terminate(); out, err = p.communicate(timeout=5)
+        require(p.returncode == 137 and not out and not err, 'bounded forced termination must return 137')
+    finally: finish(p)
+    invalid_images(h)
 
 COUNTS = {n: len(c) for n,c in CASES.items()}
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--assignment', type=int, choices=range(3,8), required=True)
+    p.add_argument('--assignment', type=int, choices=range(3,9), required=True)
     p.add_argument('--binary', type=Path, required=True)
     p.add_argument('--cc', default='gcc')
     p.add_argument('--json', type=Path)
