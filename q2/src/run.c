@@ -1,13 +1,12 @@
 #include <stdio.h>
-
 #include "runner.h"
-
-int run_command(char *const command_argv[])
+/* Retain your own previous runner and extend its setup/wait paths.
+ * The handout defines this version's required behavior. This is not a solution.
+ * HW3 migration: add the options parameter declared in runner.h.
+ */
+int run_command(char *const argv[], const struct runner_options *options)
 {
-    /* TODO (HW02): implement the process runner described in the handout.
-     * Replace this stub. Preserve the interface in runner.h.
-     */
-    (void)command_argv;
-    fputs("langar: run_command is not implemented yet\n", stderr);
+    (void)argv; (void)options;
+    fputs("TODO: merge your previous implementation and this week's features\n", stderr);
     return 1;
 }
