@@ -2,7 +2,7 @@
 CC ?= gcc
 CFLAGS ?= -O2
 REQUIRED_CFLAGS := -std=c11 -Wall -Wextra -Werror
-CPPFLAGS += -D_GNU_SOURCE -Iinclude -DLANGAR_HW=5
+CPPFLAGS += -D_GNU_SOURCE -Iinclude -DLANGAR_HW=6
 SOURCES := $(wildcard src/*.c)
 OBJECTS := $(SOURCES:.c=.o)
 .PHONY: all clean

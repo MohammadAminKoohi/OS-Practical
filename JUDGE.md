@@ -1,4 +1,4 @@
-# Running the HW5 judge
+# Running the HW6 judge
 
 Use your own previous `q2/src/run.c`; merge the new interface and helpers.
 The supplied TODO runner is intentionally incomplete. Do not replace working
@@ -12,7 +12,7 @@ prerequisites, native/VM setup and troubleshooting. Run from the repository root
 
 ```sh
 ./.langar-lab/bin/langar-lab setup
-./.langar-lab/bin/langar-lab test hw5 --source ./q2 --json ./result.json
+./.langar-lab/bin/langar-lab test hw6 --source ./q2 --json ./result.json
 ```
 
 Linux defaults to native; macOS/Windows use the owned Multipass VM. Choose
@@ -28,7 +28,7 @@ account without noninteractive sudo, use the VM backend or run the manual judge.
 sudo apt install build-essential python3 busybox-static util-linux procps bubblewrap
 make -C q2 clean
 make -C q2 CC=gcc
-sudo python3 judge/test_semester.py --assignment 5 --binary ./q2/langar --json result.json
+sudo python3 judge/test_semester.py --assignment 6 --binary ./q2/langar --json result.json
 python3 judge/check_submission.py ./submission
 ```
 
@@ -39,10 +39,12 @@ Build outputs must be removed before submission.
 Functional scoring (100 total):
 
 - `previous_features`: 20
-- `private_mount_namespace`: 20
-- `private_procfs`: 30
-- `host_mounts_unchanged`: 20
-- `isolated_exec_failure`: 10
+- `rootfs_contents`: 20
+- `host_path_hidden`: 15
+- `root_working_directory`: 10
+- `dynamic_executable`: 10
+- `rootfs_procfs`: 15
+- `rootfs_failures`: 10
 
 Exit codes: 0 passed, 1 functional failures, 2 setup/environment error. The CLI
 also uses 3 for build failure and 130 for interruption. Setup/build errors have
@@ -53,3 +55,10 @@ non-isolated HW2 contract remains unchanged.
 
 Primary documentation: [Linux manual pages](https://man7.org/linux/man-pages/),
 [OCI image spec v1.1.1](https://github.com/opencontainers/image-spec/tree/v1.1.1).
+
+## Supplied rootfs fixture
+
+```sh
+python3 tools/make_rootfs.py ./rootfs
+sudo ./q2/langar run --isolate --rootfs ./rootfs -- /bin/echo hello
+```

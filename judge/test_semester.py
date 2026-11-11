@@ -23,6 +23,10 @@ sys.path.insert(0, str(HERE))
 
 spec = importlib.util.spec_from_file_location('baseline', HERE / 'hw2.py')
 baseline = importlib.util.module_from_spec(spec); spec.loader.exec_module(baseline)
+rootfs_tool = HERE.parent / 'tools/make_rootfs.py'
+if not rootfs_tool.is_file(): rootfs_tool = HERE / 'tools/make_rootfs.py'
+spec = importlib.util.spec_from_file_location('rootfs', rootfs_tool)
+rootfs = importlib.util.module_from_spec(spec); spec.loader.exec_module(rootfs)
 require = baseline.require
 CASES = {n: [] for n in range(3, 9)}
 
@@ -227,12 +231,35 @@ def exec_failure(h):
     code, out, err, _ = h.call(['--isolate'], ['/langar-missing-command'])
     require(code == 127 and not out and err, 'isolated missing exec must return 127')
 
+@case(6, 'previous_features', 20)
+def previous6(h): previous(h)
 
+@case(6, 'rootfs_contents', 20)
+def root_contents(h): good(h.rootcall(['/bin/cat','/etc/marker']), b'inside-langar\n')
 
+@case(6, 'host_path_hidden', 15)
+def host_hidden(h):
+    marker = h.fresh('host') / 'host-only'; marker.write_text('host')
+    code, _, _, _ = h.rootcall(['/bin/cat',str(marker)])
+    require(code != 0, 'host-only absolute path was visible')
 
+@case(6, 'root_working_directory', 10)
+def root_cwd(h): good(h.rootcall(['/bin/pwd']), b'/\n')
 
+@case(6, 'dynamic_executable', 10)
+def dynamic(h): good(h.rootcall(['/bin/dynamic-echo','linked']), b'linked\n')
 
+@case(6, 'rootfs_procfs', 15)
+def root_proc(h):
+    pid, proc_pid = good(h.rootcall(['/bin/probe','proc'])).split()
+    require(pid == proc_pid and int(pid) == h.ns_pid, 'rootfs /proc incorrect')
 
+@case(6, 'rootfs_failures', 10)
+def bad_root(h):
+    code, out, err, _ = h.call(['--isolate','--rootfs',h.directory/'does-not-exist'])
+    require(code == 1 and not out and err, 'invalid rootfs setup must fail with 1')
+    code, out, err, _ = h.rootcall(['/missing'])
+    require(code == 127 and not out and err, 'rootfs missing exec must return 127')
 
 
 
@@ -259,7 +286,7 @@ COUNTS = {n: len(c) for n,c in CASES.items()}
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--assignment', type=int, choices=range(3,6), required=True)
+    p.add_argument('--assignment', type=int, choices=range(3,7), required=True)
     p.add_argument('--binary', type=Path, required=True)
     p.add_argument('--cc', default='gcc')
     p.add_argument('--json', type=Path)
