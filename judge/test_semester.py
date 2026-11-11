@@ -20,7 +20,7 @@ import time
 sys.dont_write_bytecode = True
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-
+from fixtures import image
 spec = importlib.util.spec_from_file_location('baseline', HERE / 'hw2.py')
 baseline = importlib.util.module_from_spec(spec); spec.loader.exec_module(baseline)
 rootfs_tool = HERE.parent / 'tools/make_rootfs.py'
@@ -261,11 +261,55 @@ def bad_root(h):
     code, out, err, _ = h.rootcall(['/missing'])
     require(code == 127 and not out and err, 'rootfs missing exec must return 127')
 
+@case(7, 'previous_features', 20)
+def previous7(h): previous(h)
 
+@case(7, 'image_default_command', 10)
+def image_default(h):
+    img = h.newimage()
+    out = good(h.imagecall(img)); require(int(out.split()[0]) == h.ns_pid, 'default Cmd not executed')
 
+@case(7, 'image_config_and_overrides', 20)
+def image_config(h):
+    img = h.newimage(config={'Entrypoint':['/bin/probe'], 'Cmd':['env','COURSE_VALUE'],
+                             'Env':['COURSE_VALUE=image-value'], 'WorkingDir':'/work'})
+    good(h.imagecall(img), b'image-value\n')
+    good(h.imagecall(img, ['env','PATH']), b'/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\n')
+    # Check cwd with supplied probe mode added below, and absence of host env.
+    good(h.imagecall(img, ['cwd']), b'/work\n')
+    code, _, _, _ = h.imagecall(img, ['env','LANGAR_STATE_DIR'])
+    require(code == 4, 'host environment leaked into image')
 
+@case(7, 'layer_changes_and_whiteouts', 20)
+def layers(h):
+    entries = [('bin',None),('bin/probe',h.runtime.read_bytes()),('proc',None),('work',None),
+               ('work/deleted',b'gone'),('work/replaced',b'old'),('opaque',None),('opaque/old',b'old')]
+    upper = [('work/replaced',b'new'),('opaque/new',b'new'),('opaque/.wh..wh..opq',b''),
+             ('work/.wh.deleted',b''),('work/link',('symlink','replaced')),('work/hard',('hardlink','work/replaced'))]
+    img = h.newimage(layers=[entries,upper], config={'Cmd':['/bin/probe','layer-check']})
+    good(h.imagecall(img), b'LAYERS-OK\n')
 
+@case(7, 'independent_writable_runs', 15)
+def writable(h):
+    img = h.newimage(config={'Cmd':['/bin/probe','write-check']})
+    before = tree_hash(img)
+    for _ in range(2): good(h.imagecall(img), b'base\n')
+    require(tree_hash(img) == before, 'immutable image modified')
+    processes = [h.start(['run','--isolate','--image',str(img),'--'],env=h.env) for _ in range(2)]
+    try:
+        for proc in processes:
+            out, err = proc.communicate(timeout=8)
+            require(proc.returncode == 0 and out == b'base\n' and not err, 'concurrent image writes interfered')
+    finally:
+        for proc in processes: finish(proc)
 
+@case(7, 'invalid_images_and_cleanup', 15)
+def invalid_images(h):
+    for kw in ({'arch':'unsupported'}, {'corrupt':True}, {'config':{'User':'1000','Cmd':['/bin/probe','identity']}},
+               {'layers':[[('../escape',b'invalid')]]}):
+        code, out, err, _ = h.imagecall(h.newimage(**kw))
+        require(code == 1 and not out and err, 'invalid image must fail setup with status 1')
+    require(not list(h.state.iterdir()), 'per-run state leaked after image execution/failure')
 
 def tree_hash(root):
     import hashlib
@@ -286,7 +330,7 @@ COUNTS = {n: len(c) for n,c in CASES.items()}
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--assignment', type=int, choices=range(3,7), required=True)
+    p.add_argument('--assignment', type=int, choices=range(3,8), required=True)
     p.add_argument('--binary', type=Path, required=True)
     p.add_argument('--cc', default='gcc')
     p.add_argument('--json', type=Path)

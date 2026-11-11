@@ -1,4 +1,4 @@
-# Running the HW6 judge
+# Running the HW7 judge
 
 Use your own previous `q2/src/run.c`; merge the new interface and helpers.
 The supplied TODO runner is intentionally incomplete. Do not replace working
@@ -12,7 +12,7 @@ prerequisites, native/VM setup and troubleshooting. Run from the repository root
 
 ```sh
 ./.langar-lab/bin/langar-lab setup
-./.langar-lab/bin/langar-lab test hw6 --source ./q2 --json ./result.json
+./.langar-lab/bin/langar-lab test hw7 --source ./q2 --json ./result.json
 ```
 
 Linux defaults to native; macOS/Windows use the owned Multipass VM. Choose
@@ -28,7 +28,7 @@ account without noninteractive sudo, use the VM backend or run the manual judge.
 sudo apt install build-essential python3 busybox-static util-linux procps bubblewrap
 make -C q2 clean
 make -C q2 CC=gcc
-sudo python3 judge/test_semester.py --assignment 6 --binary ./q2/langar --json result.json
+sudo python3 judge/test_semester.py --assignment 7 --binary ./q2/langar --json result.json
 python3 judge/check_submission.py ./submission
 ```
 
@@ -39,12 +39,11 @@ Build outputs must be removed before submission.
 Functional scoring (100 total):
 
 - `previous_features`: 20
-- `rootfs_contents`: 20
-- `host_path_hidden`: 15
-- `root_working_directory`: 10
-- `dynamic_executable`: 10
-- `rootfs_procfs`: 15
-- `rootfs_failures`: 10
+- `image_default_command`: 10
+- `image_config_and_overrides`: 20
+- `layer_changes_and_whiteouts`: 20
+- `independent_writable_runs`: 15
+- `invalid_images_and_cleanup`: 15
 
 Exit codes: 0 passed, 1 functional failures, 2 setup/environment error. The CLI
 also uses 3 for build failure and 130 for interruption. Setup/build errors have
@@ -62,3 +61,21 @@ Primary documentation: [Linux manual pages](https://man7.org/linux/man-pages/),
 python3 tools/make_rootfs.py ./rootfs
 sudo ./q2/langar run --isolate --rootfs ./rootfs -- /bin/echo hello
 ```
+
+## Supplied image downloader (optional network demonstration)
+
+```sh
+sudo apt install skopeo
+python3 tools/import_image.py docker.io/library/alpine:3.20 ./images/alpine
+sudo ./q2/langar run --isolate --image ./images/alpine -- /bin/echo hello
+```
+
+A mutable tag is convenient for exploration. For a repeatable demonstration use
+the `reference` recorded in `tools/image-lock.json`. `import-receipt.json` records the
+resolved native manifest. Tests generate their tiny images locally and stay offline.
+The course subset is native Linux amd64/arm64, OCI single manifest, sha256,
+tar/gzip layers, root User, regular files/directories/symlinks/hardlinks.
+Device entries, zstd, non-root User and other platforms are outside this subset.
+Entrypoint is retained; CLI arguments replace Cmd. Without CLI arguments use Cmd.
+Start with a clean image environment, default PATH, then image Env. WorkingDir
+is `/` if absent. No Docker daemon or internal Docker storage is used.
